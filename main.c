@@ -31,11 +31,43 @@ WORD fadeDelay = 0;
 BYTE startGame = 0;
 WORD sinIncrem = 0;
 WORD waveDelay = 0;
+WORD bkgX = 0;
+WORD bkgSpeed = 1;
 
 // pipes
 WORD pipeX = 80;
 WORD pipeTop = 9;
 WORD pipeBottom = 1;
+
+// SHAKE
+WORD shakeIntesity = 0;
+WORD shakeX = 0;
+WORD shakeY = 0;
+WORD shakeTime = 0;
+WORD shakeDelay = 10;
+WORD flash = 0;
+
+void moveSprite (UINT8 nb, UINT8 x, UINT8 y) {
+	move_sprite(nb, x + (LWORD)shakeX, y + (LWORD)shakeY);
+}
+
+void startShake (WORD intensity, WORD delay) {
+	shakeTime = 10;
+	shakeIntesity = intensity;
+	shakeDelay = delay;
+}
+
+void updateShake () {
+	if (shakeTime > 0) {
+		shakeX = random(shakeIntesity);
+		shakeY = random(shakeIntesity);
+		shakeTime--;
+		if (shakeTime == 0) {
+			shakeX = 0;
+			shakeY = 0;
+		}
+	}
+}
 
 void loadPipes () {
 	VBK_REG = 1;
@@ -80,70 +112,70 @@ void loadPipes () {
 }
 
 void displayPipeTop () {
-	move_sprite(PIPES + 2, pipeX, pipeTop * TILE_SIZE + TILE_SIZE);
-	move_sprite(PIPES + 3, pipeX + TILE_SIZE, pipeTop * TILE_SIZE + TILE_SIZE);
+	moveSprite(PIPES + 2, pipeX, pipeTop * TILE_SIZE + TILE_SIZE);
+	moveSprite(PIPES + 3, pipeX + TILE_SIZE, pipeTop * TILE_SIZE + TILE_SIZE);
 	switch (pipeTop) {
 		case 9:
-			move_sprite(PIPES + 20, pipeX, TILE_SIZE * 10);
-			move_sprite(PIPES + 21, pipeX + TILE_SIZE, TILE_SIZE * 10);
+			moveSprite(PIPES + 20, pipeX, TILE_SIZE * 10);
+			moveSprite(PIPES + 21, pipeX + TILE_SIZE, TILE_SIZE * 10);
 		case 8:
-			move_sprite(PIPES + 18, pipeX, TILE_SIZE * 9);
-			move_sprite(PIPES + 19, pipeX + TILE_SIZE, TILE_SIZE * 9);
+			moveSprite(PIPES + 18, pipeX, TILE_SIZE * 9);
+			moveSprite(PIPES + 19, pipeX + TILE_SIZE, TILE_SIZE * 9);
 		case 7:
-			move_sprite(PIPES + 16, pipeX, TILE_SIZE * 8);
-			move_sprite(PIPES + 17, pipeX + TILE_SIZE, TILE_SIZE * 8);
+			moveSprite(PIPES + 16, pipeX, TILE_SIZE * 8);
+			moveSprite(PIPES + 17, pipeX + TILE_SIZE, TILE_SIZE * 8);
 		case 6:
-			move_sprite(PIPES + 14, pipeX, TILE_SIZE * 7);
-			move_sprite(PIPES + 15, pipeX + TILE_SIZE, TILE_SIZE * 7);
+			moveSprite(PIPES + 14, pipeX, TILE_SIZE * 7);
+			moveSprite(PIPES + 15, pipeX + TILE_SIZE, TILE_SIZE * 7);
 		case 5:
-			move_sprite(PIPES + 12, pipeX, TILE_SIZE * 6);
-			move_sprite(PIPES + 13, pipeX + TILE_SIZE, TILE_SIZE * 6);
+			moveSprite(PIPES + 12, pipeX, TILE_SIZE * 6);
+			moveSprite(PIPES + 13, pipeX + TILE_SIZE, TILE_SIZE * 6);
 		case 4: 
-			move_sprite(PIPES + 10, pipeX, TILE_SIZE * 5);
-			move_sprite(PIPES + 11, pipeX + TILE_SIZE, TILE_SIZE * 5);
+			moveSprite(PIPES + 10, pipeX, TILE_SIZE * 5);
+			moveSprite(PIPES + 11, pipeX + TILE_SIZE, TILE_SIZE * 5);
 		case 3:
-			move_sprite(PIPES + 8, pipeX, TILE_SIZE * 4);
-			move_sprite(PIPES + 9, pipeX + TILE_SIZE, TILE_SIZE * 4);
+			moveSprite(PIPES + 8, pipeX, TILE_SIZE * 4);
+			moveSprite(PIPES + 9, pipeX + TILE_SIZE, TILE_SIZE * 4);
 		case 2:
-			move_sprite(PIPES + 6, pipeX, TILE_SIZE * 3);
-			move_sprite(PIPES + 7, pipeX + TILE_SIZE, TILE_SIZE * 3);
+			moveSprite(PIPES + 6, pipeX, TILE_SIZE * 3);
+			moveSprite(PIPES + 7, pipeX + TILE_SIZE, TILE_SIZE * 3);
 		case 1:
-			move_sprite(PIPES + 4, pipeX, TILE_SIZE * 2);
-			move_sprite(PIPES + 5, pipeX + TILE_SIZE, TILE_SIZE * 2);
+			moveSprite(PIPES + 4, pipeX, TILE_SIZE * 2);
+			moveSprite(PIPES + 5, pipeX + TILE_SIZE, TILE_SIZE * 2);
 	}
 }
 
 void displayPipeBottom () {
-	move_sprite(PIPES, pipeX, SCREENHEIGHT  - (pipeBottom * TILE_SIZE));
-	move_sprite(PIPES + 1, pipeX + TILE_SIZE, SCREENHEIGHT  - (pipeBottom * TILE_SIZE));
+	moveSprite(PIPES, pipeX, SCREENHEIGHT  - (pipeBottom * TILE_SIZE));
+	moveSprite(PIPES + 1, pipeX + TILE_SIZE, SCREENHEIGHT  - (pipeBottom * TILE_SIZE));
 	switch (pipeBottom) {
 		case 9:
-			move_sprite(PIPES + 6, pipeX, SCREENHEIGHT - TILE_SIZE * 8);
-			move_sprite(PIPES + 5, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 8);
+			moveSprite(PIPES + 6, pipeX, SCREENHEIGHT - TILE_SIZE * 8);
+			moveSprite(PIPES + 5, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 8);
 		case 8:
-			move_sprite(PIPES + 8, pipeX, SCREENHEIGHT - TILE_SIZE * 7);
-			move_sprite(PIPES + 7, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 7);
+			moveSprite(PIPES + 8, pipeX, SCREENHEIGHT - TILE_SIZE * 7);
+			moveSprite(PIPES + 7, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 7);
 		case 7:
-			move_sprite(PIPES + 10, pipeX, SCREENHEIGHT - TILE_SIZE * 6);
-			move_sprite(PIPES + 9, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 6);
+			moveSprite(PIPES + 10, pipeX, SCREENHEIGHT - TILE_SIZE * 6);
+			moveSprite(PIPES + 9, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 6);
 		case 6:
-			move_sprite(PIPES + 12, pipeX, SCREENHEIGHT - TILE_SIZE * 5);
-			move_sprite(PIPES + 11, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 5);
+			moveSprite(PIPES + 12, pipeX, SCREENHEIGHT - TILE_SIZE * 5);
+			moveSprite(PIPES + 11, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 5);
 		case 5:
-			move_sprite(PIPES + 14, pipeX, SCREENHEIGHT - TILE_SIZE * 4);
-			move_sprite(PIPES + 13, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 4);
+			moveSprite(PIPES + 14, pipeX, SCREENHEIGHT - TILE_SIZE * 4);
+			moveSprite(PIPES + 13, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 4);
 		case 4:
-			move_sprite(PIPES + 16, pipeX, SCREENHEIGHT - TILE_SIZE * 3);
-			move_sprite(PIPES + 15, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 3);
+			moveSprite(PIPES + 16, pipeX, SCREENHEIGHT - TILE_SIZE * 3);
+			moveSprite(PIPES + 15, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 3);
 		case 3:
-			move_sprite(PIPES + 18, pipeX, SCREENHEIGHT - TILE_SIZE * 2);
-			move_sprite(PIPES + 17, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 2);
+			moveSprite(PIPES + 18, pipeX, SCREENHEIGHT - TILE_SIZE * 2);
+			moveSprite(PIPES + 17, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE * 2);
 		case 2:
-			move_sprite(PIPES + 20, pipeX, SCREENHEIGHT - TILE_SIZE);
-			move_sprite(PIPES + 19, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE);
+			moveSprite(PIPES + 20, pipeX, SCREENHEIGHT - TILE_SIZE);
+			moveSprite(PIPES + 19, pipeX + TILE_SIZE, SCREENHEIGHT - TILE_SIZE);
 		case 1:
-			move_sprite(PIPES + 22, pipeX, SCREENHEIGHT);
-			move_sprite(PIPES + 21, pipeX + TILE_SIZE, SCREENHEIGHT);
+			moveSprite(PIPES + 22, pipeX, SCREENHEIGHT);
+			moveSprite(PIPES + 21, pipeX + TILE_SIZE, SCREENHEIGHT);
 	}
 }
 
@@ -165,11 +197,11 @@ void fade(WORD dir) {
 }
 
 void renderFlappySprite () {
-	move_sprite(PLAYER, flappyX, flappyY);
-	move_sprite(PLAYER + 1, flappyX + TILE_SIZE, flappyY);
-	move_sprite(PLAYER + 2, flappyX + TILE_SIZE, flappyY + TILE_SIZE);
+	moveSprite(PLAYER, flappyX, flappyY);
+	moveSprite(PLAYER + 1, flappyX + TILE_SIZE, flappyY);
+	moveSprite(PLAYER + 2, flappyX + TILE_SIZE, flappyY + TILE_SIZE);
 	if (animDelay > 5 && !dead) {
-		move_sprite(PLAYER + 3 + currentFrame, -10, -10);
+		moveSprite(PLAYER + 3 + currentFrame, -10, -10);
 		currentFrame++;
 		if (currentFrame > 2) {
 			currentFrame = 0;
@@ -177,16 +209,16 @@ void renderFlappySprite () {
 		animDelay = 0;
 	}
 	animDelay++;
-	move_sprite(PLAYER + 3 + currentFrame, flappyX, flappyY + TILE_SIZE);
+	moveSprite(PLAYER + 3 + currentFrame, flappyX, flappyY + TILE_SIZE);
 }
 
 void resetGame () {
 	dead = 0;
 	acceleY = 1;
 	flappyY = SCREENHEIGHT / 2;
-	move_sprite(PLAYER + 3 , -10, -10);
-	move_sprite(PLAYER + 4, -10, -10);
-	move_sprite(PLAYER + 5, -10, -10);
+	moveSprite(PLAYER + 3 , -10, -10);
+	moveSprite(PLAYER + 4, -10, -10);
+	moveSprite(PLAYER + 5, -10, -10);
 	pipeX = SCREENWIDTH + TILE_SIZE * 10;
 	displayPipeTop();
 	displayPipeBottom();
@@ -306,10 +338,15 @@ void updatePipes () {
 void checkCollision () {
 	if (dead == 0) {
 		if (flappyX > pipeX - TILE_SIZE * 2 && flappyX - TILE_SIZE * 2 < pipeX) {
-			if (flappyY < pipeTop * TILE_SIZE + TILE_SIZE) {
+			if (flappyY < pipeTop * (TILE_SIZE) + TILE_SIZE * 2) {
 				dead = 1;
-			} else if (flappyY > SCREENHEIGHT  - (pipeBottom + 1) * TILE_SIZE) {
+			} else if (flappyY > SCREENHEIGHT  - (pipeBottom + 2) * TILE_SIZE) {
 				dead = 1;
+			}
+			if (dead == 1) {
+				startShake(4, 10);
+				BGP_REG = 0xF1U;
+				flash = 1;
 			}
 		}
 	}
@@ -333,7 +370,11 @@ int main () {
 		delay(20);
 		displayFade();
 		if (dead == 0) {
-			scroll_bkg(1, 0);
+			bkgX += bkgSpeed;
+		}
+		if (flash == 1) {
+			BGP_REG = 0xE4U;
+			flash = 0;
 		}
 		handleInput();
 		if (!showFade && startGame) {
@@ -351,6 +392,8 @@ int main () {
 		renderFlappySprite();
 		displayPipeTop();
 		displayPipeBottom();
+		updateShake();
+		move_bkg(bkgX + shakeX, shakeY);
 	}
 	return 0;
 }
