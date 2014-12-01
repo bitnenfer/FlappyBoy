@@ -2,7 +2,10 @@ FlappyBoy
 =========
 
 Flappy Bird clone for the Game Boy.
+
 Written in C and compiled using [GBDK](http://gbdk.sourceforge.net/)
+
+[Playable Demo](http://damnbrain.com/dev/flappyboy/)
 
 ![FLAPPY SCREEN 1](http://damnbrain.com/images/flappy_boy_screen.png)
 
