@@ -1,19 +1,71 @@
+/*
+ *Copyright (C) 2014 Felipe Alfonso
+ * 
+ *	Permission is hereby granted, free of charge, to any person obtaining a copy
+ *	of this software and associated documentation files (the "Software"), to deal
+ *	in the Software without restriction, including without limitation the rights
+ *	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *	copies of the Software, and to permit persons to whom the Software is
+ *	furnished to do so, subject to the following conditions:
+ *
+ *	The above copyright notice and this permission notice shall be included in
+ *	all copies or substantial portions of the Software. 
+ *
+ *	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *	THE SOFTWARE.
+ */
+
 #include <stdio.h>
 #include <gb/gb.h>
-#include "gbmath.c"
+#include "utils.h"
 
 // assets
 #include "assets/flappy.c"
 #include "assets/background.c"
 #include "assets/background_map.c"
+#include "assets/menu.c"
+#include "assets/menu_map.c"
 
 #define PLAYER 0
+#define SCORE 30
+#define H_SCORE 34
 #define MAX_VELOC 4
 #define TILE_SIZE 8
 #define MAX_PIPE_SIZE 8
 #define PIPES 6
 #define FADE_OUT -1
 #define FADE_IN 1
+
+void moveSprite (UINT8 nb, UINT8 x, UINT8 y);
+void startShake (WORD intensity, WORD delay);
+void updateShake ();
+void displayPipeTop ();
+void displayPipeBottom ();
+void generatePipes ();
+void fade(WORD dir);
+void renderFlappySprite ();
+void updateScore ();
+void updateHighScore ();
+void displayHighScore ();
+void displayScore ();
+void resetGame ();
+void displayFade ();
+void loadBackgroundMap ();
+void loadMenu ();
+void loadFlappySprite ();
+void loadPipes ();
+void updateFlappySprite ();
+void handleInput ();
+void updatePipes ();
+void checkCollision ();
+void runGame ();
+void loadGame ();
+
 
 WORD flappyX = SCREENWIDTH / 2;
 WORD flappyY = SCREENHEIGHT / 2;
@@ -33,7 +85,10 @@ WORD sinIncrem = 0;
 WORD waveDelay = 0;
 WORD bkgX = 0;
 WORD bkgSpeed = 1;
-
+WORD score = 0;
+BYTE scoreChecked = 0;
+WORD hscore = 0;
+BYTE onMenu = 1;
 // pipes
 WORD pipeX = 80;
 WORD pipeTop = 9;
@@ -46,6 +101,24 @@ WORD shakeY = 0;
 WORD shakeTime = 0;
 WORD shakeDelay = 10;
 WORD flash = 0;
+
+int main () {
+	initMath();
+	loadMenu();
+	while (1) {
+	 	wait_vbl_done();
+		delay(20);
+		displayFade();
+		if (onMenu) {
+			if (joypad() == J_START && !showFade) {
+				fade(FADE_OUT);
+			}
+		} else {
+			runGame();
+		}
+	}
+	return 0;
+}
 
 void moveSprite (UINT8 nb, UINT8 x, UINT8 y) {
 	move_sprite(nb, x + (LWORD)shakeX, y + (LWORD)shakeY);
@@ -67,48 +140,6 @@ void updateShake () {
 			shakeY = 0;
 		}
 	}
-}
-
-void loadPipes () {
-	VBK_REG = 1;
-	// top bottom
-	set_sprite_tile(PIPES, 6);
-	set_sprite_tile(PIPES + 1, 7);
-	// top top
-	set_sprite_tile(PIPES + 2, 10);
-	set_sprite_tile(PIPES + 3, 11);
-	// bases
-	set_sprite_tile(PIPES + 4, 8);
-	set_sprite_tile(PIPES + 5, 9);
-	
-	set_sprite_tile(PIPES + 6, 8);
-	set_sprite_tile(PIPES + 7, 9);
-	
-	set_sprite_tile(PIPES + 8, 8);
-	set_sprite_tile(PIPES + 9, 9);
-	
-	set_sprite_tile(PIPES + 10, 8);
-	set_sprite_tile(PIPES + 11, 9);
-	
-	set_sprite_tile(PIPES + 12, 8);
-	set_sprite_tile(PIPES + 13, 9);
-	
-	set_sprite_tile(PIPES + 14, 8);
-	set_sprite_tile(PIPES + 15, 9);
-	
-	set_sprite_tile(PIPES + 16, 8);
-	set_sprite_tile(PIPES + 17, 9);
-	
-	set_sprite_tile(PIPES + 18, 8);
-	set_sprite_tile(PIPES + 19, 9);
-	
-	set_sprite_tile(PIPES + 20, 8);
-	set_sprite_tile(PIPES + 21, 9);
-	
-	set_sprite_tile(PIPES + 22, 8);
-	set_sprite_tile(PIPES + 23, 9);
-	
-	VBK_REG = 0;
 }
 
 void displayPipeTop () {
@@ -200,8 +231,9 @@ void renderFlappySprite () {
 	moveSprite(PLAYER, flappyX, flappyY);
 	moveSprite(PLAYER + 1, flappyX + TILE_SIZE, flappyY);
 	moveSprite(PLAYER + 2, flappyX + TILE_SIZE, flappyY + TILE_SIZE);
+	moveSprite(PLAYER + 3, flappyX, flappyY + TILE_SIZE);
 	if (animDelay > 5 && !dead) {
-		moveSprite(PLAYER + 3 + currentFrame, -10, -10);
+		set_sprite_tile(PLAYER + 3, currentFrame + 3);
 		currentFrame++;
 		if (currentFrame > 2) {
 			currentFrame = 0;
@@ -209,12 +241,84 @@ void renderFlappySprite () {
 		animDelay = 0;
 	}
 	animDelay++;
-	moveSprite(PLAYER + 3 + currentFrame, flappyX, flappyY + TILE_SIZE);
+}
+
+void updateScore () {
+	WORD tempScore, i;
+	i = 0;
+	tempScore = score;
+	if (score == 0) {
+		set_sprite_tile(SCORE, 12);
+	} else {
+		while (tempScore) {
+			set_sprite_tile(SCORE + i, 12 + (tempScore % 10));
+			tempScore /= 10;
+			i++;
+		}
+	}
+}
+
+void updateHighScore () {
+	WORD tempScore, i;
+	if (score > hscore) {
+		hscore = score;
+		i = 0;
+		tempScore = hscore;
+		if (hscore == 0) {
+			set_sprite_tile(H_SCORE, 12);
+		} else {
+			while (tempScore) {
+				set_sprite_tile(H_SCORE + i, 12 + (tempScore % 10));
+				tempScore /= 10;
+				i++;
+			}
+		}
+	}
+}
+
+void displayHighScore () {
+	if (hscore >= 1) {
+		if (hscore < 10) {
+			move_sprite(H_SCORE, SCREENWIDTH - TILE_SIZE / 2 + TILE_SIZE / 2, TILE_SIZE * 2 + 2);
+			move_sprite(H_SCORE + 1, -10, -10);
+			move_sprite(H_SCORE + 2, -10, -10);
+		} else if (hscore > 9 && hscore < 100) {
+			move_sprite(H_SCORE, SCREENWIDTH - TILE_SIZE + TILE_SIZE, TILE_SIZE * 2 + 2);
+			move_sprite(H_SCORE + 1, SCREENWIDTH - TILE_SIZE + 4 - TILE_SIZE / 2, TILE_SIZE * 2 + 2);
+			move_sprite(H_SCORE + 2, -10, -10);
+		} else if (hscore > 99 && hscore < 1000) {
+			move_sprite(H_SCORE, SCREENWIDTH - TILE_SIZE - 4 + TILE_SIZE + 4, TILE_SIZE * 2 + 2);
+			move_sprite(H_SCORE + 1, SCREENWIDTH - TILE_SIZE - 4 + 4 - TILE_SIZE / 2 + 4, TILE_SIZE * 2 + 2);
+			move_sprite(H_SCORE + 2, SCREENWIDTH - TILE_SIZE - TILE_SIZE * 2 + TILE_SIZE, TILE_SIZE * 2 + 2);
+		}
+	}
+}
+
+void displayScore () {
+	if (score < 10) {
+		move_sprite(SCORE, SCREENWIDTH / 2 + TILE_SIZE / 2, 35);
+		move_sprite(SCORE + 1, -10, -10);
+		move_sprite(SCORE + 2, -10, -10);
+	} else if (score > 9 && score < 100) {
+		move_sprite(SCORE, SCREENWIDTH / 2 + TILE_SIZE, 35);
+		move_sprite(SCORE + 1, SCREENWIDTH / 2 + 4 - TILE_SIZE / 2, 35);
+		move_sprite(SCORE + 2, -10, -10);
+	} else if (score > 99 && score < 1000) {
+		move_sprite(SCORE, SCREENWIDTH / 2 + TILE_SIZE + 4, 35);
+		move_sprite(SCORE + 1, SCREENWIDTH / 2 + 4 - TILE_SIZE / 2 + 4, 35);
+		move_sprite(SCORE + 2, SCREENWIDTH / 2 + 4 - TILE_SIZE * 2 + TILE_SIZE, 35);
+	} else {
+		// if score is > 999 will set the score back to 0. Sorry!
+		score = 0;
+	}
 }
 
 void resetGame () {
+	updateHighScore();
+	score = 0;
 	dead = 0;
 	acceleY = 1;
+	scoreChecked = 0;
 	flappyY = SCREENHEIGHT / 2;
 	moveSprite(PLAYER + 3 , -10, -10);
 	moveSprite(PLAYER + 4, -10, -10);
@@ -223,6 +327,11 @@ void resetGame () {
 	displayPipeTop();
 	displayPipeBottom();
 	renderFlappySprite();
+	set_sprite_tile(SCORE, 22);
+	move_sprite(SCORE, SCREENWIDTH / 2 + TILE_SIZE / 2, 35);
+	move_sprite(SCORE + 1, -10, -10);
+	move_sprite(SCORE + 2, -10, -10);
+	displayHighScore();
 	fade(FADE_IN);
 }
 
@@ -231,8 +340,11 @@ void displayFade () {
 		switch(fadeState) {
 			case 0:
 				BGP_REG = 0xFFU;
-				if (fadeDirection == FADE_OUT) {
+				if (fadeDirection == FADE_OUT && !onMenu) {
 					resetGame();
+				} else if (fadeDirection == FADE_OUT && onMenu) {
+					loadGame();
+					onMenu = 0;
 				}
 				break;
 			case 1:
@@ -266,17 +378,77 @@ void loadBackgroundMap () {
 	VBK_REG = 0;
 }
 
+void loadMenu () {
+	disable_interrupts();
+	DISPLAY_OFF;
+	VBK_REG = 1;
+	set_bkg_data(0, 183, MENU);
+	set_bkg_tiles(0, 0, 20, 18, MENU_MAP);
+	VBK_REG = 0;
+	enable_interrupts();
+	DISPLAY_ON;
+	SHOW_BKG;
+}
+
+
 void loadFlappySprite () {
 	VBK_REG = 1;
-	set_sprite_data(0, 13, FLAPPY);
+	set_sprite_data(0, 23, FLAPPY);
 	
 	set_sprite_tile(PLAYER, 0);
 	set_sprite_tile(PLAYER + 1, 1);
 	set_sprite_tile(PLAYER + 2, 2);
-	set_sprite_tile(PLAYER + 3, 3); // frame 0
-	set_sprite_tile(PLAYER + 4, 4); // frame 1
-	set_sprite_tile(PLAYER + 5, 5); // frame 2
+	set_sprite_tile(PLAYER + 3, 3);
 	
+	set_sprite_tile(SCORE, 12);
+	set_sprite_tile(SCORE + 1, 12);
+	set_sprite_tile(SCORE + 2, 12);
+	
+	set_sprite_tile(H_SCORE, 12);
+	set_sprite_tile(H_SCORE + 1, 12);
+	set_sprite_tile(H_SCORE + 2, 12);
+	
+	VBK_REG = 0;
+}
+
+void loadPipes () {
+	VBK_REG = 1;
+	// top bottom
+	set_sprite_tile(PIPES, 6);
+	set_sprite_tile(PIPES + 1, 7);
+	// top top
+	set_sprite_tile(PIPES + 2, 10);
+	set_sprite_tile(PIPES + 3, 11);
+	// bases
+	set_sprite_tile(PIPES + 4, 8);
+	set_sprite_tile(PIPES + 5, 9);
+	
+	set_sprite_tile(PIPES + 6, 8);
+	set_sprite_tile(PIPES + 7, 9);
+	
+	set_sprite_tile(PIPES + 8, 8);
+	set_sprite_tile(PIPES + 9, 9);
+	
+	set_sprite_tile(PIPES + 10, 8);
+	set_sprite_tile(PIPES + 11, 9);
+	
+	set_sprite_tile(PIPES + 12, 8);
+	set_sprite_tile(PIPES + 13, 9);
+	
+	set_sprite_tile(PIPES + 14, 8);
+	set_sprite_tile(PIPES + 15, 9);
+	
+	set_sprite_tile(PIPES + 16, 8);
+	set_sprite_tile(PIPES + 17, 9);
+	
+	set_sprite_tile(PIPES + 18, 8);
+	set_sprite_tile(PIPES + 19, 9);
+	
+	set_sprite_tile(PIPES + 20, 8);
+	set_sprite_tile(PIPES + 21, 9);
+	
+	set_sprite_tile(PIPES + 22, 8);
+	set_sprite_tile(PIPES + 23, 9);
 	
 	VBK_REG = 0;
 }
@@ -321,6 +493,7 @@ void handleInput () {
 			velocY -= MAX_VELOC * 2;
 			startGame = 1;
 			buttonDown = 1;
+			updateScore();
 		}
 	}
 }
@@ -331,6 +504,12 @@ void updatePipes () {
 		if (pipeX < -TILE_SIZE) {
 			generatePipes();
 			pipeX = SCREENWIDTH + TILE_SIZE;
+			scoreChecked = 0;
+		}
+		if (flappyX - TILE_SIZE > pipeX && !scoreChecked) {
+			score++;
+			updateScore();
+			scoreChecked = 1;
 		}
 	}
 }
@@ -352,8 +531,36 @@ void checkCollision () {
 	}
 }
 
-int main () {
-	initMath();
+void runGame () {
+	if (dead == 0) {
+		bkgX += bkgSpeed;
+	}
+	if (flash == 1) {
+		BGP_REG = 0xE4U;
+		flash = 0;
+	}
+	handleInput();
+	if (!showFade && startGame) {
+		updateFlappySprite();
+		checkCollision();
+		updatePipes();
+	} else if (!startGame && fadeDirection == FADE_IN) {
+		flappyY = SCREENHEIGHT / 2 + (sin(sinIncrem) * 3) / 1000;
+		if (waveDelay > 2) {
+			sinIncrem++;
+			waveDelay = 0;
+		}
+		waveDelay++;
+	}
+	renderFlappySprite();
+	displayPipeTop();
+	displayPipeBottom();
+	updateShake();
+	displayScore();
+	move_bkg(bkgX + shakeX, shakeY);
+}
+
+void loadGame () {
 	disable_interrupts();
 	DISPLAY_OFF;
 	loadFlappySprite();
@@ -365,35 +572,4 @@ int main () {
 	SHOW_BKG;
 	resetGame();
 	generatePipes();
-	while (1) {
-	 	wait_vbl_done();
-		delay(20);
-		displayFade();
-		if (dead == 0) {
-			bkgX += bkgSpeed;
-		}
-		if (flash == 1) {
-			BGP_REG = 0xE4U;
-			flash = 0;
-		}
-		handleInput();
-		if (!showFade && startGame) {
-			updateFlappySprite();
-			checkCollision();
-			updatePipes();
-		} else if (!startGame && fadeDirection == FADE_IN) {
-			flappyY = SCREENHEIGHT / 2 + (sin(sinIncrem) * 3) / 1000;
-			if (waveDelay > 2) {
-				sinIncrem++;
-				waveDelay = 0;
-			}
-			waveDelay++;
-		}
-		renderFlappySprite();
-		displayPipeTop();
-		displayPipeBottom();
-		updateShake();
-		move_bkg(bkgX + shakeX, shakeY);
-	}
-	return 0;
 }
